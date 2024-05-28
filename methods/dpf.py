@@ -349,7 +349,7 @@ class DPF():
         # build the tensorflow graph
         if connect_and_initialize:
             # load training data statistics (which are needed to build the tf graph)
-            statistics = dict(np.load(os.path.join(model_path, statistics_file)))
+            statistics = dict(np.load(os.path.join(model_path, statistics_file), allow_pickle=True))
             for key in statistics.keys():
                 if statistics[key].shape == ():
                     statistics[key] = statistics[key].item()  # convert 0d array of dictionary back to a normal dictionary

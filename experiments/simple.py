@@ -3,6 +3,8 @@ import tensorflow as tf
 from methods.dpf import DPF
 from utils.data_utils import load_data, noisyfy_data, make_batch_iterator, remove_state
 from utils.exp_utils import get_default_hyperparams
+import matplotlib
+matplotlib.use('TkAgg')
 
 
 def train_dpf(task='nav01', data_path='../data/100s', model_path='../models/tmp', plot=False):
