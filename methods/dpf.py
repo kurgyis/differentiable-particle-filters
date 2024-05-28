@@ -45,6 +45,7 @@ class DPF():
                              's': tf.placeholder('float32', [None, None, 3], 'states'),
                              'num_particles': tf.placeholder('float32'),
                              'keep_prob': tf.placeholder_with_default(tf.constant(1.0), []),
+                             'return_intermediate': tf.placeholder_with_default(tf.constant(False), [], 'return_intermediate'), # for intermediate particle states
                              }
         self.num_particles_float = self.placeholders['num_particles']
         self.num_particles = tf.to_int32(self.num_particles_float)
@@ -525,16 +526,18 @@ class DPF():
         return log
 
 
-    def predict(self, sess, batch, num_particles, return_particles=False, **kwargs):
+    def predict(self, sess, batch, num_particles, return_particles=False, return_intermediate=False, **kwargs):
         # define input dict, use the first state only if we do tracking
         input_dict = {self.placeholders['o']: batch['o'],
                       self.placeholders['a']: batch['a'],
-                      self.placeholders['num_particles']: num_particles}
+                      self.placeholders['num_particles']: num_particles,
+                      self.placeholders['return_intermediate']: return_intermediate}
         if self.init_with_true_state:
             input_dict[self.placeholders['s']] = batch['s'][:, :1]
 
         if return_particles:
-            return sess.run([self.pred_states, self.particle_list, self.particle_probs_list], input_dict)
+            return sess.run([self.pred_states, self.particle_list, self.particle_probs_list, self.intermediate_states], input_dict)
+            #return sess.run([self.pred_states, self.particle_list, self.particle_probs_list], input_dict)
         else:
             return sess.run(self.pred_states, input_dict)
 
@@ -584,7 +587,7 @@ class DPF():
             return result
 
 
-        def loop(particles, particle_probs, particle_list, particle_probs_list, additional_probs_list, i):
+        def loop(particles, particle_probs, particle_list, particle_probs_list, additional_probs_list, intermediate_states, i):
 
             num_proposed_float = tf.round((self.propose_ratio ** tf.cast(i, tf.float32)) * self.num_particles_float)
             num_proposed = tf.cast(num_proposed_float, tf.int32)
@@ -636,10 +639,13 @@ class DPF():
             # NORMALIZE PROBABILITIES
             particle_probs /= tf.reduce_sum(particle_probs, axis=1, keep_dims=True)
 
+             # Store intermediate states if required
+            intermediate_states = tf.cond(self.placeholders['return_intermediate'], lambda: tf.concat([intermediate_states, particles[:, tf.newaxis]], axis=1), lambda: intermediate_states)
+
             particle_list = tf.concat([particle_list, particles[:, tf.newaxis]], axis=1)
             particle_probs_list = tf.concat([particle_probs_list, particle_probs[:, tf.newaxis]], axis=1)
 
-            return particles, particle_probs, particle_list, particle_probs_list, additional_probs_list, i + 1
+            return particles, particle_probs, particle_list, particle_probs_list, additional_probs_list, intermediate_states, i + 1
 
         # reshapes and sets the first shape sizes to None (which is necessary to keep the shape consistent in while loop)
         particle_list = tf.reshape(initial_particles,
@@ -647,16 +653,20 @@ class DPF():
         particle_probs_list = tf.reshape(initial_particle_probs, shape=[self.batch_size, -1, self.num_particles])
         additional_probs_list = tf.reshape(tf.ones([self.batch_size, self.num_particles, 4]), shape=[self.batch_size, -1, self.num_particles, 4])
 
+        # Initialize intermediate states list
+        intermediate_states = tf.zeros_like(particle_list)
+
         # run the filtering process
-        particles, particle_probs, particle_list, particle_probs_list, additional_probs_list, i = tf.while_loop(
+        particles, particle_probs, particle_list, particle_probs_list, additional_probs_list, intermediate_states, i = tf.while_loop(
             lambda *x: x[-1] < self.seq_len, loop,
-            [initial_particles, initial_particle_probs, particle_list, particle_probs_list, additional_probs_list,
+            [initial_particles, initial_particle_probs, particle_list, particle_probs_list, additional_probs_list, intermediate_states,
              tf.constant(1, dtype='int32')], name='loop')
 
         # compute mean of particles
         self.pred_states = self.particles_to_state(particle_list, particle_probs_list)
         self.particle_list = particle_list
         self.particle_probs_list = particle_probs_list
+        self.intermediate_states = intermediate_states
 
         return particles, particle_probs, encodings, particle_list, particle_probs_list
 

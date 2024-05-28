@@ -30,6 +30,8 @@ def get_default_hyperparams():
         },
         'test' : {
             'num_particles': 1000,
+            'return_particles': True,
+            'return_intermediate': True,
         }
     }
 
