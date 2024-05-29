@@ -1,3 +1,5 @@
+import local_env
+
 from utils.data_utils_kitti import load_kitti_sequences
 import tensorflow as tf
 from methods.dpf_kitti import DPF
