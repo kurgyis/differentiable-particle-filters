@@ -6,7 +6,7 @@ from utils.data_utils import load_data, noisyfy_data, make_batch_iterator, remov
 from utils.exp_utils import get_default_hyperparams
 import matplotlib
 import matplotlib.pyplot as plt
-matplotlib.use('TkAgg')
+#matplotlib.use('TkAgg')
 
 
 def train_dpf(task='nav01', data_path='../data/100s', model_path='../models/tmp', plot=False):
@@ -39,7 +39,7 @@ def test_dpf(task='nav01', data_path='../data/100s', model_path='../models/tmp')
 
     # instantiate method
     hyperparams = get_default_hyperparams()
-    method = DPF(**hyperparams['global'])
+    method = DPF(**hyperparams['no_propose'])
 
     with tf.Session() as session:
         # load method and apply to new data

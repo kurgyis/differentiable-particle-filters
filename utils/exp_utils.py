@@ -32,6 +32,14 @@ def get_default_hyperparams():
             'num_particles': 1000,
             'return_particles': True,
             'return_intermediate': True,
+        },
+        'no_propose': {
+            'init_with_true_state': False,
+            'learn_odom': False,
+            'use_proposer': True,
+            'propose_ratio': 0.,
+            'proposer_keep_ratio': 0.15,
+            'min_obs_likelihood': 0.004,
         }
     }
 

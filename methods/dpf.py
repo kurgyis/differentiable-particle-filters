@@ -608,6 +608,9 @@ class DPF():
                 standard_particles = tf.stop_gradient(standard_particles)
                 standard_particle_probs = tf.stop_gradient(standard_particle_probs)
 
+                # Store intermediate states if required
+                intermediate_states = tf.cond(self.placeholders['return_intermediate'], lambda: tf.concat([intermediate_states, standard_particles[:, tf.newaxis]], axis=1), lambda: intermediate_states)
+
                 # motion update
                 standard_particles = self.motion_update(self.placeholders['a'][:, i], standard_particles, means, stds, state_step_sizes)
 
@@ -620,7 +623,7 @@ class DPF():
                 proposed_particles = self.propose_particles(encodings[:, i], num_proposed, state_mins, state_maxs)
                 proposed_particle_probs = tf.ones([self.batch_size, num_proposed])
 
-
+            
             # NORMALIZE AND COMBINE PARTICLES
             if self.propose_ratio == 1.0:
                 particles = proposed_particles
@@ -638,9 +641,6 @@ class DPF():
 
             # NORMALIZE PROBABILITIES
             particle_probs /= tf.reduce_sum(particle_probs, axis=1, keep_dims=True)
-
-             # Store intermediate states if required
-            intermediate_states = tf.cond(self.placeholders['return_intermediate'], lambda: tf.concat([intermediate_states, particles[:, tf.newaxis]], axis=1), lambda: intermediate_states)
 
             particle_list = tf.concat([particle_list, particles[:, tf.newaxis]], axis=1)
             particle_probs_list = tf.concat([particle_probs_list, particle_probs[:, tf.newaxis]], axis=1)

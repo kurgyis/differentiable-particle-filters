@@ -1,5 +1,6 @@
 import tensorflow as tf
 
+import local_env 
 from methods.dpf import DPF
 from utils.data_utils import load_data, noisyfy_data, make_batch_iterator, remove_state
 from utils.exp_utils import get_default_hyperparams
